@@ -6,11 +6,15 @@ const emulator = "melonDS";
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
+    const nds_mod = b.createModule(.{
+        .optimize = optimize,
+        .root_source_file = b.path("src/main.zig"),
+    });
+
     // by default, running just `zig build` will create zig-out/zig-nds.nds
     const nds = compileNds(b, .{
         .name = "zig_nds_example",
-        .optimize = optimize,
-        .root_file = b.path("src/main.zig"),
+        .module = nds_mod,
     });
     b.default_step.dependOn(&nds.step);
 
@@ -35,7 +39,7 @@ pub fn build(b: *std.Build) void {
     setDeps(b, nds_lib);
 }
 
-fn ndsTarget(b: *std.Build) std.Build.ResolvedTarget {
+pub fn ndsTarget(b: *std.Build) std.Build.ResolvedTarget {
     return b.resolveTargetQuery(.{
         .cpu_arch = .thumb,
         .os_tag = .freestanding,
@@ -62,9 +66,7 @@ fn setDeps(b: *std.Build, step: *std.Build.Step.Compile) void {
 /// Options needed to create the zig module for the nds obj.
 pub const NdsOptions = struct {
     name: []const u8,
-    optimize: std.builtin.OptimizeMode,
-    root_file: std.Build.LazyPath,
-    imports: []const std.Build.Module.Import = &.{},
+    module: *std.Build.Module,
 };
 
 pub fn compileNds(b: *std.Build, opts: NdsOptions) *std.Build.Step.Run {
@@ -75,15 +77,12 @@ pub fn compileNds(b: *std.Build, opts: NdsOptions) *std.Build.Step.Run {
         @panic("Missing DEVKITARM env var.");
     };
 
-    // code -> .o
-    const nds_ex_mod = b.createModule(.{
-        .root_source_file = opts.root_file,
-        .target = ndsTarget(b),
-        .optimize = opts.optimize,
-        .link_libc = true,
-        .imports = opts.imports,
-    });
+    opts.module.link_libc = true;
+    opts.module.resolved_target = ndsTarget(b);
 
+    const nds_ex_mod = opts.module;
+
+    // code -> .o
     var nds_ex_obj = b.addObject(.{
         .name = opts.name,
         .root_module = nds_ex_mod,
