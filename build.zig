@@ -70,10 +70,10 @@ pub const NdsOptions = struct {
 };
 
 pub fn compileNds(b: *std.Build, opts: NdsOptions) *std.Build.Step.Run {
-    const devkitpro = std.process.getEnvVarOwned(b.allocator, "DEVKITPRO") catch {
+    const devkitpro = std.process.Environ.getAlloc(b.allocator, "DEVKITPRO") catch {
         @panic("Missing DEVKITPRO env var.");
     };
-    const devkitarm = std.process.getEnvVarOwned(b.allocator, "DEVKITARM") catch {
+    const devkitarm = std.process.Environ.getAlloc(b.allocator, "DEVKITARM") catch {
         @panic("Missing DEVKITARM env var.");
     };
 
